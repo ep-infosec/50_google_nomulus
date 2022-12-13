@@ -1,0 +1,302 @@
+{
+  "allowedLicenses": [
+    {
+      "moduleLicense": "Apache Software License, Version 1.1"
+    },
+    {
+      "moduleLicense": "Apache Software License, version 1.1"
+    },
+    {
+      "moduleLicense": "Apache 2"
+    },
+    {
+      "moduleLicense": "Apache 2.0"
+    },
+    {
+      "moduleLicense": "Apache-2.0"
+    },
+    {
+      "moduleLicense": "Apache License"
+    },
+    {
+      "moduleLicense": "Apache License 2.0"
+    },
+    {
+      "moduleLicense": "Apache License v2.0"
+    },
+    {
+      "moduleLicense": "Apache License V2.0"
+    },
+    {
+      "moduleLicense": "Apache License, Version 2.0"
+    },
+    {
+      "moduleLicense": "Apache Software License - Version 2.0"
+    },
+    {
+      "moduleLicense": "The Apache License, Version 2.0"
+    },
+    {
+      "moduleLicense": "The Apache Software License, Version 2.0"
+    },
+    {
+      "moduleLicense": "The Apache Software License, version 2.0"
+    },
+    {
+      "moduleLicense": "Bouncy Castle Licence"
+    },
+    {
+      "moduleLicense": "BSD"
+    },
+    {
+      "moduleLicense": "BSD-2-Clause"
+    },
+    {
+      "moduleLicense": "BSD 2-Clause License"
+    },
+    {
+      "moduleLicense": "BSD 2-Clause license"
+    },
+    {
+      "moduleLicense": "BSD 3-clause"
+    },
+    {
+      "moduleLicense": "BSD 3-Clause"
+    },
+    {
+      "moduleLicense": "BSD 3-Clause License"
+    },
+    {
+      "moduleLicense": "BSD 3-clause New License"
+    },
+    {
+      "moduleLicense": "BSD-3-Clause"
+    },
+    {
+      "moduleLicense": "BSD-3-Clause;link=\"https://raw.githubusercontent.com/dnsjava/dnsjava/master/LICENSE\""
+    },
+    {
+      "moduleLicense": "3-Clause BSD License"
+    },
+    {
+      "moduleLicense": "The 3-Clause BSD License"
+    },
+    {
+      "moduleLicense": "BSD Licence 3"
+    },
+    {
+      "moduleLicense": "BSD License"
+    },
+    {
+      "moduleLicense": "BSD License 3"
+    },
+    {
+      "moduleLicense": "BSD New License"
+    },
+    {
+      "moduleLicense": "BSD New license"
+    },
+    {
+      "moduleLicense": "BSD style"
+    },
+    {
+      "moduleLicense": "BSD-2-Clause"
+    },
+    {
+      "moduleLicense": "New BSD License"
+    },
+    {
+      "moduleLicense": "Revised BSD"
+    },
+    {
+      "moduleLicense": "The BSD License"
+    },
+    {
+      "moduleLicense": "The New BSD License"
+    },
+    {
+      "moduleLicense": "The PostgreSQL License"
+    },
+    {
+      "moduleLicense": "CC0"
+    },
+    {
+      "moduleLicense": "CC0 1.0 Universal License"
+    },
+    {
+      "moduleLicense": "CDDL 1.1"
+    },
+    {
+      "moduleLicense": "CDDL + GPLv2 with classpath exception"
+    },
+    {
+      "moduleLicense": "COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0"
+    },
+    {
+      "moduleLicense": "https://glassfish.java.net/public/CDDL+GPL_1_1.html, https://glassfish.java.net/public/CDDL+GPL_1_1.html"
+    },
+    {
+      "moduleLicense": "CDDL+GPL License"
+    },
+    {
+      "moduleLicense": "\\n                Dual license consisting of the CDDL v1.1 and GPL v2\\n            "
+    },
+    {
+      "moduleLicense": "Eclipse Distribution License (New BSD License)"
+    },
+    {
+      "moduleLicense": "Eclipse Distribution License v. 1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Distribution License - v 1.0"
+    },
+    {
+      "moduleLicense": "EDL 1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License - Version 1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License - v 1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License 1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License v1.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License - v 2.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License 2.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License v. 2.0"
+    },
+    {
+      "moduleLicense": "Eclipse Public License v2.0"
+    },
+    {
+      "moduleLicense": "https://www.eclipse.org/legal/epl-2.0/, http://www.gnu.org/copyleft/gpl.html, http://www.gnu.org/licenses/lgpl.html"
+    },
+    {
+      "moduleLicense": "GNU General Public License Version 2"
+    },
+    {
+      "moduleLicense": "GNU General Public License, version 2, with the Classpath Exception"
+    },
+    {
+      "moduleLicense": "GNU General Public License, version 2 with the GNU Classpath Exception"
+    },
+    {
+      "moduleLicense": "GNU GENERAL PUBLIC LICENSE, Version 2 + Classpath Exception"
+    },
+    {
+      "moduleLicense": "GNU Library General Public License v2.1 or later"
+    },
+    {
+      "moduleLicense": "GPL2 w/ CPE"
+    },
+    {
+      "moduleLicense": "GNU Lesser Public License"
+    },
+    {
+      "moduleLicense": "GNU Lesser General Public License Version 2.1"
+    },
+    {
+      "moduleLicense": "GNU Library General Public License v2.1 or later"
+    },
+    {
+      "moduleLicense": "GNU Lesser General Public License v3.0"
+    },
+    // This is just 3-clause BSD.
+    {
+      "moduleLicense": "Go License"
+    },
+    {
+      "moduleLicense": "The Go license"
+    },
+    {
+      "moduleLicense": "Google App Engine Terms of Service"
+    },
+    {
+      "moduleLicense": "GWT Terms"
+    },
+    {
+      "moduleLicense": "ICU License"
+    },
+    {
+      "moduleLicense": "The JSON License"
+    },
+    {
+      "moduleLicense": "LGPL-2.1+"
+    },
+    {
+      "moduleLicense": "LGPL, version 2.1"
+    },
+    {
+      "moduleLicense": "MIT"
+    },
+    {
+      "moduleLicense": "MIT License"
+    },
+    {
+      "moduleLicense": "MIT license"
+    },
+    {
+      "moduleLicense": "The MIT License"
+    },
+    {
+      "moduleLicense": "The MIT license"
+    },
+    {
+      "moduleLicense": "The MIT License (MIT)"
+    },
+    {
+      "moduleLicense": "The PostgreSQL License"
+    },
+    {
+      "moduleLicense": "Mozilla Public License Version 2.0"
+    },
+    {
+      "moduleLicense": "Unicode/ICU License"
+    },
+    {
+      "moduleLicense": "Public Domain",
+      "moduleName": "aopalliance:aopalliance"
+    },
+    {
+      "moduleLicense": "Public Domain",
+      "moduleName": "org.tukaani:xz"
+    },
+    {
+      // "Apache License, Version 2.0".
+      "moduleLicense": null,
+      "moduleVersion": "2.10.0",
+      "moduleName": "com.google.gwt:gwt-user"
+    },
+    {
+      // "Apache License, Version 2.0". The plugin is able to parse up to
+      // 2.11.3 correctly but then something changed with 2.12.* and it no
+      // longer parses correctly, even though it's still Apache 2.0.
+      "moduleLicense": null,
+      "moduleName": "com.fasterxml.jackson:jackson-bom"
+    },
+    {
+      // "Apache License, Version 2.0". The plugin is able to parse up to
+      // 2.0.33.Final but not this verson.
+      "moduleLicense": null,
+      "moduleVersion": "2.0.46.Final",
+      "moduleName": "io.netty:netty-tcnative-classes"
+    },
+    {
+      // Actually Eclipse Public License v2.0
+      "moduleLicense": null,
+      "moduleName": "org.junit:junit-bom"
+    },
+    {
+      "moduleLicense": "The W3C Software License"
+    }
+  ]
+}

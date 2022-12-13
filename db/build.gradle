@@ -1,0 +1,253 @@
+import org.gradle.process.internal.ExecException
+
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+plugins {
+  id "org.flywaydb.flyway" version "6.0.1"
+  id 'maven-publish'
+}
+
+ext {
+  Set restrictedDbEnv =
+      [ 'sandbox', 'production' ].asUnmodifiable()
+
+  def dbServerProperty = 'dbServer'
+  def dbNameProperty = 'dbName'
+
+  def dbServer = findProperty(dbServerProperty).toString().toLowerCase()
+  def dbName = findProperty(dbNameProperty)
+
+  isRestricted = {
+    return restrictedDbEnv.contains(dbServer)
+  }
+
+  getAccessInfoByHostPort = { hostAndPort ->
+    println "Database set to ${hostAndPort}."
+    return [
+        url: "jdbc:postgresql://${hostAndPort}/${dbName}",
+        user: findProperty('dbUser'),
+        password: findProperty('dbPassword')]
+  }
+
+  getSocketFactoryAccessInfo = { env ->
+    def cred = getCloudSqlCredential(env).split(' ')
+    def sqlInstance = cred[0]
+    println "Database set to Cloud SQL instance ${sqlInstance}."
+    return [
+        url: """\
+                   jdbc:postgresql://google/${dbName}?cloudSqlInstance=
+                   ${sqlInstance}&socketFactory=
+                   com.google.cloud.sql.postgres.SocketFactory"""
+                   .stripIndent()
+                   .replaceAll(System.lineSeparator(), '') ,
+        user: cred[1],
+        password: cred[2]]
+  }
+
+  getJdbcAccessInfo = {
+    if (rootProject.projects.keySet().contains(dbServer)) {
+      return getSocketFactoryAccessInfo(dbServer)
+    } else if (!dbServer.isEmpty()) {
+      return getAccessInfoByHostPort(dbServer)
+    } else {
+      // Not running flyway tasks. Return a dummy object for Flyway config.
+      return [ url: '', user: '', password: '' ]
+    }
+  }
+
+  // Retrieves the Cloud SQL credential for the schema deployer. Result is in
+  // the form of 'instancename username password'.
+  //
+  // The env parameter may be one of the following: alpha, crash, sandbox, or
+  // production.
+  //
+  // User must make sure that the nomulus tool can be found on PATH. An alias
+  // will not work.
+  getCloudSqlCredential = { env ->
+    try {
+      execInBash('which nomulus', '/tmp')
+    } catch (ExecException e) {
+      throw new IllegalStateException(
+          'nomulus not found. Make sure it is on PATH, not just an alias.')
+    }
+    def command =
+        "nomulus -e ${env} get_sql_credential --user schema_deployer"
+
+    return execInBash(command, project.rootDir)
+  }
+}
+
+task schemaJar(type: Jar) {
+  archiveBaseName = 'schema'
+  from(sourceSets.main.resources) {
+    include 'sql/flyway/**'
+    include 'sql/schema/nomulus.golden.sql'
+  }
+}
+
+// Expose NomulusPostgreSql class to ':core' for implementation, without
+// leaking unnecessary dependencies to the release artifacts through ':core'.
+// Jar is put in the 'implementationApi' configuration.
+task implementationApiJar(type: Jar) {
+  archiveBaseName = 'implementation'
+  from(sourceSets.main.output) {
+    include 'google/registry/persistence/NomulusPostgreSql**'
+  }
+}
+
+configurations {
+  implementationApi
+  schema
+  integration
+}
+
+artifacts {
+  implementationApi implementationApiJar
+  schema schemaJar
+}
+
+publishing {
+  repositories {
+    maven {
+      url project.publish_repo
+    }
+  }
+  publications {
+    sqlSchemaPublication(MavenPublication) {
+      groupId 'google.registry'
+      artifactId 'schema'
+      version project.schema_version
+      artifact schemaJar
+    }
+  }
+}
+
+// Adds flyway tasks such as: flywayInfo, flywayValidate, flywayMigrate (
+// deploying the schema in local repository), and flywayClean (dropping all data
+// in the database). The latter two commands are disallowed in environments
+// listed in ext.restrictedDbEnv.
+//
+// Examples:
+// Get info in alpha: nom_build :db:flywayInfo --dbServer=alpha
+// Deploy schema to a local test instance and override the database name:
+// nom_build :db:flywayMigrate --dbServer=localhost:5432 --dbName=not-default \
+//    --dbUser=... --dbPassword=...
+
+flyway {
+  def accessInfo = project.ext.getJdbcAccessInfo()
+
+  url = accessInfo.url
+  user = accessInfo.user
+  password = accessInfo.password
+  schemas = [ 'public' ]
+
+  locations = [ "classpath:sql/flyway" ]
+}
+
+dependencies {
+  def deps = rootProject.dependencyMap
+
+  implementation deps['org.flywaydb:flyway-core']
+
+  runtimeOnly deps['com.google.cloud.sql:postgres-socket-factory']
+  runtimeOnly deps['org.postgresql:postgresql']
+
+  testImplementation deps['com.google.flogger:flogger']
+  testRuntimeOnly deps['com.google.flogger:flogger-system-backend']
+  testImplementation deps['com.google.guava:guava']
+  testImplementation deps['com.google.truth:truth']
+  testRuntimeOnly deps['io.github.java-diff-utils:java-diff-utils']
+  testImplementation deps['org.junit.jupiter:junit-jupiter-api']
+  testImplementation deps['org.junit.jupiter:junit-jupiter-engine']
+  testImplementation deps['org.testcontainers:postgresql']
+  testImplementation deps['org.testcontainers:testcontainers']
+  testImplementation deps['org.testcontainers:junit-jupiter']
+  testImplementation deps['org.testcontainers:postgresql']
+  testImplementation project(path: ':common', configuration: 'testing')
+}
+
+task generateFlywayIndex {
+  def flywayBase = "$projectDir/src/main/resources/sql/flyway"
+  def filenamePattern = /V(\d+)__.*\.sql/
+
+  def getSeqNum = { file ->
+    def match = file.getName() =~ filenamePattern
+    if (match.size() != 1) {
+      throw new IllegalArgumentException("Bad Flyway filename: $file")
+    }
+    return match[0][1] as int
+  }
+
+  doLast {
+    def files = new File(flywayBase).listFiles()
+    def indexFile = new File("${flywayBase}.txt")
+    indexFile.write ''
+    for (def file : files.sort{a, b -> getSeqNum(a) <=> getSeqNum(b)}) {
+      indexFile << "${file.name}\n"
+    }
+  }
+}
+
+flywayInfo.dependsOn('buildNeeded')
+flywayValidate.dependsOn('buildNeeded')
+
+if (ext.isRestricted()) {
+  // Disable dangerous Flyway tasks in sandbox and production. Only allow info and validate.
+  tasks.findAll { task -> task.group.equals('Flyway')}.each {
+    if (it.name == 'flywayMigrate') {
+      it.doFirst {
+        throw new UnsupportedOperationException(
+            """ \
+              FlywayMigrate is disabled. See README.md for schema deployment
+              instructions.""".stripIndent())
+      }
+    } else if (it.name != 'flywayInfo' && it.name != 'flywayValidate') {
+      it.doFirst {
+        throw new UnsupportedOperationException(
+            "${it.name} from commandline is not allowed.")
+      }
+    }
+  }
+}
+
+if (project.baseSchemaTag != '') {
+  repositories {
+    maven {
+      url project.publish_repo
+    }
+  }
+  dependencies {
+    integration "google.registry:schema:${project.baseSchemaTag}"
+  }
+
+  // Checks if Flyway scripts can be deployed to an existing database with
+  // an older release. Please refer to SchemaTest.java for more information.
+  task schemaIncrementalDeployTest(dependsOn: processResources, type: Test) {
+    useJUnitPlatform()
+    include 'google/registry/sql/flyway/SchemaTest.*'
+    classpath = configurations.testRuntimeClasspath
+        .plus(configurations.integration)
+        .plus(files(sourceSets.test.output.classesDirs))
+        .plus(files(sourceSets.test.output.resourcesDir))
+        .plus(files(sourceSets.main.output.classesDirs))
+
+    // Declare test-runtime dependency on Flyway scripts in the resources dir.
+    // They are not on classpath since they conflict with the base schema.
+    inputs.dir sourceSets.main.output.resourcesDir
+
+    // Specifies which test to run using the following property
+    systemProperty 'deploy_to_existing_db', 'true'
+  }
+}

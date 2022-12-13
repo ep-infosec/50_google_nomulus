@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appengine-web-app xmlns="http://appengine.google.com/ns/1.0">
+
+  <runtime>java8</runtime>
+  <service>default</service>
+  <threadsafe>true</threadsafe>
+  <sessions-enabled>true</sessions-enabled>
+  <instance-class>B4_1G</instance-class>
+  <manual-scaling>
+    <instances>12</instances>
+  </manual-scaling>
+
+  <system-properties>
+    <property name="java.util.logging.config.file"
+              value="WEB-INF/logging.properties"/>
+    <property name="google.registry.environment"
+              value="production"/>
+  </system-properties>
+
+  <static-files>
+    <include path="/*.html" expiration="1d"/>
+    <include path="/assets/js/**" expiration="1d"/>
+    <include path="/assets/css/**" expiration="1d"/>
+    <include path="/assets/images/**" expiration="1d"/>
+    <include path="/assets/sources/**" expiration="1d"/>
+  </static-files>
+
+  <!-- Prevent uncaught servlet errors from leaking a stack trace. -->
+  <static-error-handlers>
+    <handler file="error.html"/>
+  </static-error-handlers>
+</appengine-web-app>

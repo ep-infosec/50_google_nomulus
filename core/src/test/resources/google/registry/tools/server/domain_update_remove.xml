@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<epp xmlns="urn:ietf:params:xml:ns:epp-1.0">
+  <command>
+    <update>
+      <domain:update
+       xmlns:domain="urn:ietf:params:xml:ns:domain-1.0">
+        <domain:name>example.tld</domain:name>
+        <domain:rem>
+          <domain:ns>
+            <domain:hostObj>ns4.zdns.google</domain:hostObj>
+          </domain:ns>
+          <domain:contact type="admin">crr-admin1</domain:contact>
+          <domain:contact type="tech">crr-tech1</domain:contact>
+          <domain:status s="serverHold"/>
+        </domain:rem>
+      </domain:update>
+    </update>
+    <extension>
+      <secDNS:update xmlns:secDNS="urn:ietf:params:xml:ns:secDNS-1.1">
+        <secDNS:rem>
+          <secDNS:dsData>
+            <secDNS:keyTag>7</secDNS:keyTag>
+            <secDNS:alg>8</secDNS:alg>
+            <secDNS:digestType>1</secDNS:digestType>
+            <secDNS:digest>A94A8FE5CCB19BA61C4C0873D391E987982FBBD3</secDNS:digest>
+          </secDNS:dsData>
+          <secDNS:dsData>
+            <secDNS:keyTag>6</secDNS:keyTag>
+            <secDNS:alg>5</secDNS:alg>
+            <secDNS:digestType>4</secDNS:digestType>
+            <secDNS:digest>768412320F7B0AA5812FCE428DC4706B3CAE50E02A64CAA16A782249BFE8EFC4B7EF1CCB126255D196047DFEDF17A0A9</secDNS:digest>
+          </secDNS:dsData>
+        </secDNS:rem>
+      </secDNS:update>
+    </extension>
+    <clTRID>RegistryTool</clTRID>
+  </command>
+</epp>

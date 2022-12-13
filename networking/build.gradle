@@ -1,0 +1,70 @@
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+dependencies {
+  def deps = rootProject.dependencyMap
+
+  implementation deps['com.google.dagger:dagger']
+  implementation deps['com.google.flogger:flogger']
+  implementation deps['com.google.guava:guava']
+  implementation deps['io.netty:netty-buffer']
+  implementation deps['io.netty:netty-codec']
+  implementation deps['io.netty:netty-codec-http']
+  implementation deps['io.netty:netty-common']
+  implementation deps['io.netty:netty-handler']
+  implementation deps['io.netty:netty-transport']
+  implementation deps['javax.inject:javax.inject']
+  implementation deps['org.bouncycastle:bcpkix-jdk15on']
+  implementation deps['org.bouncycastle:bcprov-jdk15on']
+  implementation project(':util')
+  implementation project(':common')
+
+  runtimeOnly deps['com.google.flogger:flogger-system-backend']
+  runtimeOnly deps['io.netty:netty-tcnative-boringssl-static']
+
+  testImplementation deps['com.google.truth:truth']
+  testImplementation deps['junit:junit']
+  testImplementation deps['org.bouncycastle:bcpkix-jdk15on']
+  testImplementation deps['org.bouncycastle:bcprov-jdk15on']
+  testImplementation deps['org.junit.jupiter:junit-jupiter-api']
+  testImplementation deps['org.junit.jupiter:junit-jupiter-engine']
+  testImplementation deps['org.junit.jupiter:junit-jupiter-params']
+  testImplementation deps['org.junit.platform:junit-platform-runner']
+  testImplementation deps['org.junit.platform:junit-platform-suite-api']
+  testImplementation deps['org.testcontainers:junit-jupiter']
+  testImplementation project(path: ':common', configuration: 'testing')
+
+  annotationProcessor deps['com.google.dagger:dagger-compiler']
+  testAnnotationProcessor deps['com.google.dagger:dagger-compiler']
+}
+
+test {
+  useJUnitPlatform()
+}
+
+// Make testing artifacts available to be depended up on by other projects.
+task testJar(type: Jar) {
+  classifier = 'test'
+  from sourceSets.test.output
+}
+
+artifacts {
+  testRuntimeOnly testJar
+}
+
+configurations {
+  testRuntimeOnly {
+    canBeConsumed = true
+  }
+}

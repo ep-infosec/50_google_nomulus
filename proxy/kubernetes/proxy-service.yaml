@@ -1,0 +1,50 @@
+kind: Service
+apiVersion: v1
+metadata:
+  namespace: default
+  name: proxy-service
+spec:
+  selector:
+    app: proxy
+  ports:
+  - protocol: TCP
+    port: 30000
+    nodePort: 30000
+    targetPort: health-check
+    name: health-check
+  - protocol: TCP
+    port: 30001
+    nodePort: 30001
+    targetPort: whois
+    name: whois
+  - protocol: TCP
+    port: 30002
+    nodePort: 30002
+    targetPort: epp
+    name: epp
+  - protocol: TCP
+    port: 30010
+    nodePort: 30010
+    targetPort: http-whois
+    name: http-whois
+  - protocol: TCP
+    port: 30011
+    nodePort: 30011
+    targetPort: https-whois
+    name: https-whois
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  namespace: default
+  name: proxy-autoscale
+  labels:
+    app: proxy
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: proxy-deployment
+  maxReplicas: 10
+  minReplicas: 1

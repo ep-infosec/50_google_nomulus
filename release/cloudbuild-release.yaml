@@ -1,0 +1,209 @@
+# To run the build locally, install cloud-build-local first.
+# You will need access to a private registry, so be sure to install the docker
+# credential helper.
+# See: https://cloud.google.com/cloud-build/docs/build-debug-locally
+# Then run:
+# cloud-build-local --config=cloudbuild-release.yaml --dryrun=false \
+#   --substitutions TAG_NAME=[TAG],_INTERNAL_REPO_URL=[URL] ..
+#
+# To manually trigger a build on GCB, run:
+# gcloud builds submit --config cloudbuild-release.yaml --substitutions \
+#   TAG_NAME=[TAG],_INTERNAL_REPO_URL=[URL] ..
+#
+# To trigger a build automatically, follow the instructions below and add a trigger:
+# https://cloud.google.com/cloud-build/docs/running-builds/automate-builds
+#
+# This pipeline prepares a release. The pipeline should be run against the Nomulus public repo on
+# GitHub. It builds the builder and base images, and hard codes the sha256 hashes of the resulting
+# images in the merged code base (internal + public) , which is tagged and pushed into the release
+# repo. Actual release artifacts are built from the release repo, ensuring reproducibility.
+steps:
+# Check the out internal repo.
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    git clone https://gerrit.googlesource.com/gcompute-tools
+    ./gcompute-tools/git-cookie-authdaemon
+    git clone ${_INTERNAL_REPO_URL} nomulus-internal
+# Tag and push the internal repo.
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    git tag ${TAG_NAME}
+    git push origin ${TAG_NAME}
+  dir: 'nomulus-internal'
+# Merge the repos.
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    shopt -s dotglob
+    rm -rf .git && rm -rf nomulus-internal/.git
+    cp -rf nomulus-internal/* .
+    rm -rf nomulus-internal
+# Build the builder image and tag the proxy base image, then upload them to GCR.
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    docker build -t gcr.io/${PROJECT_ID}/builder:${TAG_NAME} .
+    docker tag gcr.io/${PROJECT_ID}/builder:${TAG_NAME} gcr.io/${PROJECT_ID}/builder:latest
+    docker pull gcr.io/distroless/java
+    docker tag gcr.io/distroless/java gcr.io/${PROJECT_ID}/base:${TAG_NAME}
+    docker tag gcr.io/distroless/java gcr.io/${PROJECT_ID}/base:latest
+    docker pull gcr.io/distroless/java:debug
+    docker tag gcr.io/distroless/java:debug gcr.io/${PROJECT_ID}/base-debug:${TAG_NAME}
+    docker tag gcr.io/distroless/java:debug gcr.io/${PROJECT_ID}/base-debug:latest
+    docker push gcr.io/${PROJECT_ID}/builder:latest
+    docker push gcr.io/${PROJECT_ID}/builder:${TAG_NAME}
+    docker push gcr.io/${PROJECT_ID}/base:latest
+    docker push gcr.io/${PROJECT_ID}/base:${TAG_NAME}
+    docker push gcr.io/${PROJECT_ID}/base-debug:latest
+    docker push gcr.io/${PROJECT_ID}/base-debug:${TAG_NAME}
+  dir: 'release/builder/'
+# Do text replacement in the merged repo, hardcoding image digests.
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    builder_digest=$(gcloud container images list-tags gcr.io/${PROJECT_ID}/builder \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    base_digest=$(gcloud container images list-tags gcr.io/${PROJECT_ID}/base \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    debug_digest=$(gcloud container images list-tags gcr.io/${PROJECT_ID}/base-debug \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    sed -i s%distroless/java%${PROJECT_ID}/base@$base_digest% proxy/Dockerfile
+    sed -i s%distroless/java:debug%${PROJECT_ID}/base-debug@$debug_digest% core/Dockerfile
+    sed -i s/builder:latest/builder@$builder_digest/g release/cloudbuild-proxy.yaml
+    sed -i s/builder:latest/builder@$builder_digest/g release/cloudbuild-nomulus.yaml
+    sed -i s/builder:latest/builder@$builder_digest/g release/cloudbuild-deploy.yaml
+    sed -i s/builder:latest/builder@$builder_digest/g release/cloudbuild-sync.yaml
+    sed -i s/builder:latest/builder@$builder_digest/g release/cloudbuild-tag.yaml
+    sed -i s/GCP_PROJECT/${PROJECT_ID}/ proxy/kubernetes/proxy-*.yaml
+    sed -i s/'$${TAG_NAME}'/${TAG_NAME}/g release/cloudbuild-sync.yaml
+    sed -i s/'$${TAG_NAME}'/${TAG_NAME}/g release/cloudbuild-deploy.yaml
+    for environment in alpha crash sandbox production; do
+      sed s/'$${_ENV}'/${environment}/g release/cloudbuild-deploy.yaml \
+        > release/cloudbuild-deploy-${environment}.yaml
+      sed s/'$${_ENV}'/${environment}/g release/cloudbuild-delete.yaml \
+        > release/cloudbuild-delete-${environment}.yaml
+    done
+# Build the schema_deployer image and upload it to GCR.
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    docker build -t gcr.io/${PROJECT_ID}/schema_deployer:${TAG_NAME} .
+    docker tag gcr.io/${PROJECT_ID}/schema_deployer:${TAG_NAME} \
+      gcr.io/${PROJECT_ID}/schema_deployer:latest
+    docker push gcr.io/${PROJECT_ID}/schema_deployer:latest
+    docker push gcr.io/${PROJECT_ID}/schema_deployer:${TAG_NAME}
+  dir: 'release/schema-deployer/'
+# Build the schema_verifier image and upload it to GCR.
+- name: 'gcr.io/cloud-builders/docker'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    docker build -t gcr.io/${PROJECT_ID}/schema_verifier:${TAG_NAME} .
+    docker tag gcr.io/${PROJECT_ID}/schema_verifier:${TAG_NAME} \
+      gcr.io/${PROJECT_ID}/schema_verifier:latest
+    docker push gcr.io/${PROJECT_ID}/schema_verifier:latest
+    docker push gcr.io/${PROJECT_ID}/schema_verifier:${TAG_NAME}
+  dir: 'release/schema-verifier/'
+# Do text replacement in the schema-deploy and schema-verify configs.
+- name: 'gcr.io/cloud-builders/gcloud'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    builder_digest=$( \
+      gcloud container images list-tags gcr.io/${PROJECT_ID}/builder \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    schema_deployer_digest=$( \
+      gcloud container images list-tags gcr.io/${PROJECT_ID}/schema_deployer \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    schema_verifier_digest=$( \
+      gcloud container images list-tags gcr.io/${PROJECT_ID}/schema_verifier \
+      --format='get(digest)' --filter='tags = ${TAG_NAME}')
+    sed -i s/builder:latest/builder@$builder_digest/g \
+      release/cloudbuild-schema-deploy.yaml
+    sed -i s/builder:latest/builder@$builder_digest/g \
+      release/cloudbuild-schema-verify.yaml
+    sed -i s/schema_deployer:latest/schema_deployer@$schema_deployer_digest/g \
+      release/cloudbuild-schema-deploy.yaml
+    sed -i s/schema_verifier:latest/schema_verifier@$schema_verifier_digest/g \
+      release/cloudbuild-schema-verify.yaml
+    sed -i s/'$${TAG_NAME}'/${TAG_NAME}/g release/cloudbuild-schema-deploy.yaml
+    for environment in alpha crash sandbox production; do
+      sed s/'$${_ENV}'/${environment}/g release/cloudbuild-schema-deploy.yaml \
+        > release/cloudbuild-schema-deploy-${environment}.yaml
+      sed s/'$${_ENV}'/${environment}/g release/cloudbuild-schema-verify.yaml \
+        > release/cloudbuild-schema-verify-${environment}.yaml
+    done
+# Upload the gradle binary to GCS if it does not exist and point URL in gradle wrapper to it.
+- name: 'gcr.io/cloud-builders/gsutil'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    gradle_url=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties \
+      | awk -F = '{print $2}' | sed 's/\\//g')
+    gradle_bin=$(basename $gradle_url)
+    gcs_loc="domain-registry-maven-repository/gradle"
+    curl -O -L ${gradle_url}
+    if gsutil -q stat gs://${gcs_loc}/${gradle_bin}
+    then
+      local_md5=$(md5sum ${gradle_bin} | awk '{print $1}')
+      remote_md5=$(gsutil hash -h gs://${gcs_loc}/${gradle_bin} | grep md5 | awk '{print $3}')
+      if [[ ${local_md5} != ${remote_md5} ]]
+      then
+        echo "${gradle_bin} HAS CHANGED ON GRADLE WEBSITE, USING THE BINARY ON GCS."
+      fi
+    else
+      gsutil cp $gradle_bin gs://${gcs_loc}/
+      gsutil acl ch -u AllUsers:R gs://${gcs_loc}/${gradle_bin}
+    fi
+    rm ${gradle_bin}
+    sed -i s%services.gradle.org/distributions%storage.googleapis.com/${gcs_loc}% \
+      gradle/wrapper/gradle-wrapper.properties
+# Check out the release repo.
+- name: 'gcr.io/cloud-builders/gcloud'
+  args: ['source', 'repos', 'clone', 'nomulus-release']
+# Tag and check in the release repo.
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    cp -rf nomulus-release/.git .
+    rm -rf nomulus-release
+    git config --global user.name "Cloud Build"
+    git config --global user.email \
+      $(gcloud auth list --format='get(account)' --filter=active)
+    git add .
+    git commit -m "Release commit for tag ${TAG_NAME}"
+    git push origin master
+    git tag ${TAG_NAME}
+    git push origin ${TAG_NAME}
+timeout: 3600s
+options:
+  machineType: 'E2_HIGHCPU_32'

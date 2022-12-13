@@ -1,0 +1,570 @@
+// Copyright 2019 The Nomulus Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
+buildscript {
+  if (rootProject.enableDependencyLocking.toBoolean()) {
+    // Lock buildscript dependencies.
+    configurations.classpath {
+      resolutionStrategy.activateDependencyLocking()
+
+      // log4j has high-profile security vulnerabilities. It's a transitive
+      // dependency used by Gradle itself during build, and not strictly needed.
+      exclude group: 'org.apache.logging.log4j'
+    }
+  }
+
+  dependencies {
+    classpath 'com.google.cloud.tools:appengine-gradle-plugin:2.4.1'
+    classpath 'net.ltgt.gradle:gradle-errorprone-plugin:2.0.2'
+    classpath 'org.sonatype.aether:aether-api:1.13.1'
+    classpath 'org.sonatype.aether:aether-impl:1.13.1'
+  }
+}
+
+plugins {
+  // Java static analysis plugins. Keep versions consistent with
+  // ./buildSrc/build.gradle
+  id 'nebula.lint' version '16.0.2'
+  id 'net.ltgt.errorprone' version '2.0.2'
+  id 'checkstyle'
+  id 'com.github.johnrengelman.shadow' version '5.1.0'
+
+  // NodeJs plugin
+  id "com.github.node-gradle.node" version "3.0.1"
+
+  id 'idea'
+  id 'com.diffplug.gradle.spotless' version '3.25.0'
+
+  id 'jacoco'
+  id 'com.dorongold.task-tree' version '2.1.0'
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+node {
+  download = true
+  version = "16.14.0"
+  npmVersion = "6.14.11"
+}
+
+wrapper {
+  distributionType = Wrapper.DistributionType.ALL
+}
+
+apply plugin: google.registry.gradle.plugin.ReportUploaderPlugin
+
+reportUploader {
+  // Set the location where we want to upload the build results.
+  // e.g. -P uploaderDestination=gcs://domain-registry-alpha-build-result-test
+  //
+  // If not set - the upload will be skipped
+  destination = uploaderDestination
+
+  // The location of the file containing the OAuth2 Google Cloud credentials.
+  //
+  // The file can contain a Service Account key file in JSON format from the
+  // Google Developers Console or a stored user credential using the format
+  // supported by the Cloud SDK.
+  //
+  // If no file is given - the default credentials are used.
+  credentialsFile = uploaderCredentialsFile
+
+  // If set to 'yes', each file will be uploaded to GCS in a separate thread.
+  // This is MUCH faster.
+  multithreadedUpload = uploaderMultithreadedUpload
+}
+
+apply from: 'dependencies.gradle'
+
+apply from: 'dependency_lic.gradle'
+
+apply from: 'utils.gradle'
+
+// Custom task to run checkLicense in buildSrc, which is not triggered
+// by root project tasks. A shell task is used because buildSrc tasks
+// cannot be referenced in the same way as tasks from a regular included
+// build.
+task checkBuildSrcLicense(type:Exec) {
+  workingDir "${rootDir}/buildSrc"
+  commandLine '../gradlew', 'checkLicense'
+}
+tasks.checkLicense.dependsOn(tasks.checkBuildSrcLicense)
+tasks.build.dependsOn(tasks.checkLicense)
+
+// Provide defaults for all of the project properties.
+
+// Only do linting if the build is successful.
+gradleLint.autoLintAfterFailure = false
+
+// Paths to main and test sources.
+ext.projectRootDir = "${rootDir}"
+
+// Tasks to deploy/stage all App Engine services
+task deploy {
+  group = 'deployment'
+  description = 'Deploys all services to App Engine.'
+}
+
+task stage {
+  group = 'deployment'
+  description = 'Generates application directories for all services.'
+}
+
+// App-engine environment configuration.  We set up all of the variables in
+// the root project.
+
+def environments = ['production', 'sandbox', 'alpha', 'crash', 'qa']
+
+def gcpProject = null
+
+apply from: "${rootDir.path}/projects.gradle"
+
+if (environment == '') {
+    // Keep the project null, this will prevent deployment.  Set the
+    // environment to "alpha" because other code needs this property to
+    // explode the war file.
+    environment = 'alpha'
+} else if (environment != 'production' && environment != 'sandbox') {
+    gcpProject = projects[environment]
+    if (gcpProject == null) {
+        throw new GradleException("-Penvironment must be one of " +
+                                  "${projects.keySet()}.")
+    }
+}
+
+rootProject.ext.environment = environment
+rootProject.ext.gcpProject = gcpProject
+rootProject.ext.prodOrSandboxEnv = environment in ['production', 'sandbox']
+
+// Function to verify that the deployment parameters have been set.
+def verifyDeploymentParams() {
+    if (prodOrSandboxEnv) {
+        // Do not deploy to prod or sandbox. Print a prominent error in bright red.
+        System.err.println('\033[31;1m-----------------------------------------------------------------')
+        System.err.println('*** DANGER WILL ROBINSON!')
+        System.err.println('*** You may not deploy to production or sandbox from gradle.  Do a')
+        System.err.println('*** release from Spinnaker, see deployment playbook.')
+        System.err.println('-----------------------------------------------------------------')
+        throw new GradleException('Aborting. See prominent error above.')
+    } else if (gcpProject == null) {
+        def error = 'You must specify -Penvironment={alpha,crash,qa}'
+        System.err.println("\033[33;1m${error}\033[0m")
+        throw GradleException("Aborting:  ${error}")
+    }
+}
+
+// Closure that we can just drop into all of our deployment tasks.
+rootProject.ext.verifyDeploymentConfig = {
+    doFirst { verifyDeploymentParams() }
+}
+
+// Subproject configuration.
+
+// Alias this since it collides with the closure variable name
+def allowInsecure = allowInsecureProtocol
+
+allprojects {
+  // Skip no-op project
+  if (project.name == 'services') return
+
+  repositories {
+    if (!mavenUrl.isEmpty()) {
+      maven {
+        println "Java dependencies: Using repo ${mavenUrl}..."
+        url mavenUrl
+        allowInsecureProtocol = allowInsecure == "true"
+      }
+    } else {
+      println "Java dependencies: Using Maven Central..."
+      mavenCentral()
+      google()
+      maven {
+        url "https://packages.confluent.io/maven/"
+        content {
+          includeGroup "io.confluent"
+        }
+      }
+    }
+  }
+
+  if (rootProject.enableCrossReferencing.toBoolean()) {
+    gradle.projectsEvaluated {
+      tasks.withType(JavaCompile) {
+        options.fork = true
+        options.forkOptions.javaHome =
+          file("${System.env.REAL_JAVA_HOME}")
+      }
+    }
+  }
+}
+
+rootProject.ext {
+  pyver = { exe ->
+    try {
+      ext.execInBash(
+          exe + " -c 'import sys; print(sys.hexversion)' 2>/dev/null",
+          "/") as Integer
+    } catch (org.gradle.process.internal.ExecException e) {
+      return -1;
+    }
+  }
+
+  // Return the path to a usable python3 executable.
+  getPythonExecutable = {
+    // Find a python version greater than 3.7.3 (this is somewhat arbitrary, we
+    // know we'd like at least 3.6, but 3.7.3 is the latest that ships with
+    // Debian so it seems like that should be available anywhere).
+    def MIN_PY_VER = 0x3070300
+    if (pyver('python') >= MIN_PY_VER) {
+      return 'python'
+    } else if (pyver('/usr/bin/python3') >= MIN_PY_VER) {
+      return '/usr/bin/python3'
+    } else {
+      throw new GradleException("No usable Python version found (build " +
+                                "requires at least python 3.7.3)");
+    }
+  }
+}
+
+task runPresubmits(type: Exec) {
+
+  args('config/presubmits.py')
+
+  doFirst {
+    executable getPythonExecutable()
+  }
+}
+
+def javadocSource = []
+def javadocClasspath = []
+def javadocDependentTasks = []
+
+subprojects {
+  // Skip no-op project
+  if (project.name == 'services') return
+
+  ext.createUberJar = {
+      taskName,
+      binaryName,
+      mainClass,
+      List<Configuration> configs = [project.configurations.runtimeClasspath],
+      List<SourceSetOutput> srcOutput = [project.sourceSets.main.output],
+      List<String> excludes = [] ->
+    project.tasks.create(
+        taskName, com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+      mergeServiceFiles()
+      baseName = binaryName
+      if (mainClass != '') {
+        manifest {
+          attributes 'Main-Class': mainClass
+        }
+      }
+      zip64 = true
+      classifier = ''
+      archiveVersion = ''
+      configurations = configs
+      from srcOutput
+      // Excludes signature files that accompany some dependency jars, like
+      // bonuncycastle. If they are present, only classes from those signed jars are
+      // made available to the class loader.
+      // see https://discuss.gradle.org/t/signing-a-custom-gradle-plugin-thats-downloaded-by-the-build-system-from-github/1365
+      exclude "META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA"
+      exclude excludes
+
+      // We do seem to get duplicates when constructing uber-jars, either
+      // this is a product of something in gradle 7 or a product of gradle 7
+      // now giving an error about them when it didn't previously.
+      duplicatesStrategy DuplicatesStrategy.WARN
+    }
+  }
+
+  if (rootProject.enableDependencyLocking.toBoolean()) {
+    buildscript {
+      // Lock buildscript dependencies.
+      configurations.classpath {
+        resolutionStrategy.activateDependencyLocking()
+      }
+    }
+  }
+
+  afterEvaluate {
+    if (rootProject.enableDependencyLocking.toBoolean()
+        && project.name != 'integration'
+        && project.name != 'java8compatibility') {
+      // The ':integration' project runs server/schema integration tests using
+      // dynamically specified jars with no transitive dependency. Therefore
+      // dependency-locking does not make sense. Furthermore, during
+      // evaluation it resolves the 'testRuntimeOnly' configuration, making it
+      // immutable. Locking activation would trigger an invalid operation
+      // exception.
+      //
+      // The ':java8compatibility' project is test-only. Its source does not go
+      // into production.
+      //
+      // For all other projects, due to problem with the gradle-license-report
+      // plugin, the dependencyLicenseReport configuration must opt out of
+      // dependency-locking. See dependency_lic.gradle for the reason why.
+      //
+      // To selectively activate dependency locking without hardcoding them
+      // in the 'configurations' block, the following code must run after
+      // project evaluation, when all configurations have been created.
+      configurations.each {
+        if (it.name != 'dependencyLicenseReport' && it.name != 'integration') {
+          it.resolutionStrategy.activateDependencyLocking()
+        }
+      }
+    }
+  }
+
+  def services = [':services:default',
+                  ':services:backend',
+                  ':services:tools',
+                  ':services:pubapi']
+
+  // Set up all of the deployment projects.
+  if (services.contains(project.path)) {
+
+    apply from: "${rootDir.path}/appengine_war.gradle"
+
+    // Return early, do not apply the settings below.
+    return
+  }
+
+  apply from: "${rootDir.path}/java_common.gradle"
+
+  if (project.name != 'docs') {
+    compileJava {
+      // TODO: Remove this once we migrate off AppEngine.
+      options.release = 8
+    }
+  }
+
+  project.tasks.test.dependsOn runPresubmits
+
+  def commonlyExcludedResources = ['**/*.java', '**/BUILD']
+
+  project.ext.javaDir = "${project.projectDir}/src/main/java"
+  project.ext.javaTestDir = "${project.projectDir}/src/test/java"
+  project.ext.resourcesSourceDir = "${project.projectDir}/src/main/resources"
+
+  sourceSets {
+    main {
+      resources {
+        srcDirs += project.ext.javaDir
+        exclude commonlyExcludedResources
+      }
+    }
+    test {
+      resources {
+        srcDirs += project.ext.javaTestDir
+        exclude commonlyExcludedResources
+      }
+    }
+  }
+
+  // No need to produce javadoc for the docs subproject, which has no APIs to
+  // expose to users.
+  if (project.name != 'docs') {
+    javadocSource << project.sourceSets.main.allJava
+    javadocClasspath << project.sourceSets.main.runtimeClasspath
+    javadocClasspath << "${buildDir}/generated/sources/annotationProcessor/java/main"
+    javadocDependentTasks << project.tasks.compileJava
+  }
+}
+
+// If "-P verboseTestOutput=true" is passed in, configure all subprojects to dump all of their
+// output and final test status (pass/fail, errors) for each test class.
+//
+// Note that we can't do this in the main subprojects section above because that's evaluated before
+// the subproject build files and the test tasks haven't been defined yet.  We have to do it from
+// the projectsEvaluted hook, which gets called after the subprojects are configured.
+if (verboseTestOutput.toBoolean()) {
+  gradle.projectsEvaluated({
+    subprojects {
+      tasks.withType(Test) {
+        testLogging {
+          events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED,
+              TestLogEvent.STANDARD_OUT, TestLogEvent.STANDARD_ERROR
+          exceptionFormat TestExceptionFormat.FULL
+          showExceptions true
+          showCauses true
+          showStackTraces true
+
+          afterSuite { desc, result ->
+            println "Results: ${result.resultType}, " +
+                "${result.successfulTestCount}/${result.testCount} tests " +
+                "passed, ${result.failedTestCount} failures.";
+          }
+        }
+      }
+    }
+  })
+}
+
+task checkDependenciesDotGradle {
+  def buildSrcDepsFile = File.createTempFile('buildSrc', 'deps')
+  buildSrcDepsFile.deleteOnExit()
+  dependsOn createGetBuildSrcDirectDepsTask(buildSrcDepsFile)
+
+  doLast {
+    Set<String> depsInUse = []
+    allprojects {
+      configurations.all {
+        it.dependencies.findAll { it.group != null }.each {
+          // Note: .toString() is required since GString should
+          // not be mixed with Java Strings.
+          depsInUse.add("${it.group}:${it.name}".toString())
+        }
+      }
+    }
+    if (buildSrcDepsFile.exists()) {
+      depsInUse.addAll(buildSrcDepsFile.readLines())
+    }
+    def unusedDeps =
+        rootProject.dependencyMap.keySet()
+            .findAll { !depsInUse.contains(it) }
+            .toSorted()
+
+    if (unusedDeps.isEmpty()) {
+      return
+    }
+    logger.error(
+        "Unused dependencies in dependencies.gradle:\n${unusedDeps.toListString()}")
+    throw new IllegalStateException(
+        "The dependencies.gradle file should only contain direct dependencies.")
+  }
+}
+tasks.build.dependsOn(tasks.checkDependenciesDotGradle)
+
+def createGetBuildSrcDirectDepsTask(outputFileName) {
+  return tasks
+      .create(
+          "getBuildSrcDeps_${java.util.UUID.randomUUID()}".toString(),
+          Exec) {
+    workingDir "${rootDir}/buildSrc"
+    commandLine '../gradlew', 'exportDependencies',
+                "-PdependencyExportFile=${outputFileName}"
+  }
+}
+
+rootProject.ext {
+  invokeJavaDiffFormatScript = { action ->
+    println("JAVA_HOME=${System.env.JAVA_HOME}")
+    println("PATH=${System.env.PATH}")
+    println(ext.execInBash("type java", "${rootDir}"))
+    println(ext.execInBash("java -version", "${rootDir}"))
+    def scriptDir = rootDir.path.endsWith('buildSrc')
+            ? "${rootDir}/../java-format"
+            : "${rootDir}/java-format"
+    def workingDir = rootDir.path.endsWith('buildSrc')
+            ? "${rootDir}/.."
+            : rootDir
+    def formatDiffScript = "${scriptDir}/google-java-format-git-diff.sh"
+    def pythonExe = getPythonExecutable()
+
+    return ext.execInBash(
+        "PYTHON=${pythonExe} ${formatDiffScript} ${action}", "${workingDir}")
+  }
+}
+
+// Checks if modified lines in Java source files need reformatting.
+// Note that this task checks modified Java files in the entire repository.
+task javaIncrementalFormatCheck {
+  doLast {
+    // We can only do this in a git tree.
+    if (new File("${rootDir}/.git").exists()) {
+      def checkResult = invokeJavaDiffFormatScript("check")
+      if (checkResult == 'true') {
+        throw new IllegalStateException(
+            "Some Java files need to be reformatted. You may use the "
+                + "'javaIncrementalFormatDryRun' task to review\n "
+                + "the changes, or the 'javaIncrementalFormatApply' task "
+                + "to reformat.")
+      } else if (checkResult != 'false') {
+        throw new RuntimeException(
+            "Failed to invoke format check script:\n" + checkResult)
+      }
+      println("Incremental Java format check ok.")
+    } else {
+      println("Omitting format check: not in a git directory.")
+    }
+  }
+}
+
+// Shows how modified lines in Java source files will change after formatting.
+// Note that this task checks modified Java files in the entire repository.
+task javaIncrementalFormatDryRun {
+  doLast {
+    println("${invokeJavaDiffFormatScript("show")}")
+  }
+}
+tasks.build.dependsOn(tasks.javaIncrementalFormatCheck)
+
+// Checks if modified lines in Java source files need reformatting.
+// Note that this task processes modified Java files in the entire repository.
+task javaIncrementalFormatApply {
+  doLast {
+    invokeJavaDiffFormatScript("format")
+  }
+}
+
+task javadoc(type: Javadoc) {
+  source javadocSource
+  // Java 11.0.17 has the following bug that affects annotation handling on
+  // package-info.java:
+  // https://bugs.openjdk.org/browse/JDK-8222091
+  exclude "**/package-info.java"
+  classpath = files(javadocClasspath)
+  destinationDir = file("${buildDir}/docs/javadoc")
+  options.encoding = "UTF-8"
+  // In a lot of places we don't write @return so suppress warnings about that.
+  options.addBooleanOption('Xdoclint:all,-missing', true)
+  options.addBooleanOption("-allow-script-in-comments",true)
+  options.tags = ["type:a:Generic Type",
+                  "error:a:Expected Error",
+                  "invariant:a:Guaranteed Property"]
+}
+
+tasks.build.dependsOn(tasks.javadoc)
+
+// Task for doing development on core Nomulus.
+// This fixes code formatting automatically as necessary, builds and tests the
+// core Nomulus codebase, and runs all presubmits.
+task coreDev {
+  dependsOn 'javaIncrementalFormatApply'
+  dependsOn 'javadoc'
+  dependsOn 'checkDependenciesDotGradle'
+  dependsOn 'checkLicense'
+  dependsOn ':core:check'
+  dependsOn 'assemble'
+}
+
+javadocDependentTasks.each { tasks.javadoc.dependsOn(it) }
+
+// disable javadoc in subprojects, these will break because they don't have
+// the correct classpath (see above).
+gradle.taskGraph.whenReady { graph ->
+  graph.getAllTasks().each { task ->
+    def subprojectJavadoc = (task.path =~ /:.+:javadoc/)
+    if (subprojectJavadoc) {
+        println "Skipping ${task.path} for javadoc (only root javadoc works)"
+        task.enabled = false
+    }
+  }
+}

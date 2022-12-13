@@ -1,0 +1,49 @@
+// Copyright 2017 The Nomulus Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package google.registry.flows;
+
+import static google.registry.model.eppoutput.Result.Code.SUCCESS;
+import static google.registry.model.eppoutput.Result.Code.SUCCESS_AND_CLOSE;
+import static google.registry.testing.EppMetricSubject.assertThat;
+
+import google.registry.testing.AppEngineExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+/** Tests for login lifecycle. */
+class EppLifecycleLoginTest extends EppTestCase {
+
+  @RegisterExtension
+  final AppEngineExtension appEngine =
+      AppEngineExtension.builder().withCloudSql().withTaskQueue().build();
+
+  @Test
+  void testLoginAndLogout_recordsEppMetric() throws Exception {
+    assertThatLoginSucceeds("NewRegistrar", "foo-BAR2");
+    assertThat(getRecordedEppMetric())
+        .hasClientId("NewRegistrar")
+        .and()
+        .hasCommandName("Login")
+        .and()
+        .hasStatus(SUCCESS);
+    assertThatLogoutSucceeds();
+    assertThat(getRecordedEppMetric())
+        .hasClientId("NewRegistrar")
+        .and()
+        .hasCommandName("Logout")
+        .and()
+        .hasStatus(SUCCESS_AND_CLOSE);
+  }
+}

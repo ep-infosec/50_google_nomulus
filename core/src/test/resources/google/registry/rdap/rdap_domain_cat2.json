@@ -1,0 +1,261 @@
+{
+  "rdapConformance": [
+    "rdap_level_0",
+    "icann_rdap_response_profile_0",
+    "icann_rdap_technical_implementation_guide_0"
+  ],
+  "objectClassName": "domain",
+  "handle": "%DOMAIN_HANDLE_1%",
+  "ldhName": "%DOMAIN_PUNYCODE_NAME_1%",
+  "status": [
+    "client delete prohibited",
+    "client renew prohibited",
+    "client transfer prohibited",
+    "server update prohibited"
+  ],
+  "links": [
+    {
+      "href": "https://example.tld/rdap/domain/%DOMAIN_PUNYCODE_NAME_1%",
+      "type": "application/rdap+json",
+      "rel": "self"
+    },
+    {
+      "href": "https://rdap.example.com/withSlash/domain/%DOMAIN_PUNYCODE_NAME_1%",
+      "type": "application/rdap+json",
+      "rel": "related"
+    },
+    {
+      "href": "https://rdap.example.com/withoutSlash/domain/%DOMAIN_PUNYCODE_NAME_1%",
+      "type": "application/rdap+json",
+      "rel": "related"
+    }
+  ],
+  "events": [
+    {
+      "eventAction": "registration",
+      "eventActor": "TheRegistrar",
+      "eventDate": "1997-01-01T00:00:00.000Z"
+    },
+    {
+      "eventAction": "expiration",
+      "eventDate": "2110-10-08T00:44:59.000Z"
+    },
+    {
+      "eventAction": "last update of RDAP database",
+      "eventDate": "2000-01-01T00:00:00.000Z"
+    },
+    {
+      "eventAction": "last changed",
+      "eventDate": "2009-05-29T20:13:00.000Z"
+    }
+  ],
+  "nameservers": [
+    {
+      "objectClassName": "nameserver",
+      "handle": "%NAMESERVER_HANDLE_1%",
+      "ldhName": "%NAMESERVER_NAME_1%",
+      "links": [
+        {
+          "href": "https://example.tld/rdap/nameserver/%NAMESERVER_NAME_1%",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        }
+      ]
+    },
+    {
+      "objectClassName": "nameserver",
+      "handle": "%NAMESERVER_HANDLE_2%",
+      "ldhName": "%NAMESERVER_NAME_2%",
+      "links": [
+        {
+          "href": "https://example.tld/rdap/nameserver/%NAMESERVER_NAME_2%",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "objectClassName": "entity",
+      "handle": "1",
+      "roles": [ "registrar" ],
+      "links": [
+        {
+          "href": "https://example.tld/rdap/entity/1",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "vcardArray" : [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "%REGISTRAR_FULL_NAME_1%"]
+        ]
+      ],
+      "publicIds" : [
+        {
+          "type": "IANA Registrar ID",
+          "identifier":"1"
+        }
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "description": [
+            "Summary data only. For complete data, send a specific query for the object."
+          ],
+          "type": "object truncated due to unexplainable reasons"
+        }
+      ],
+      "entities": [
+        {
+          "objectClassName": "entity",
+          "roles": ["abuse"],
+          "status": ["active"],
+          "vcardArray": [
+            "vcard",
+            [
+              ["version",{},"text","4.0"],
+              ["fn",{},"text","Jake Doe"],
+              ["tel",{"type":["voice"]},"uri","tel:+1.2125551216"],
+              ["tel",{"type":["fax"]},"uri","tel:+1.2125551216"],
+              ["email",{},"text","jakedoe@example.com"]
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "objectClassName": "entity",
+      "handle": "%CONTACT_HANDLE_1%",
+      "roles": ["administrative"],
+      "links": [
+        {
+          "href": "https://example.tld/rdap/entity/%CONTACT_HANDLE_1%",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "vcardArray": [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "Sieglinde"],
+          ["org", {}, "text", "GOOGLE INCORPORATED <script>"],
+          ["adr", {}, "text", [ "", "", "123 Example Boulevard <script>", "KOKOMO", "BM", "31337", "United States" ] ],
+          ["tel", { "type": [ "voice" ] }, "uri", "tel:+1.2126660420"],
+          ["tel", { "type": [ "fax" ] }, "uri", "tel:+1.2126660420"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        },
+        {
+          "title": "EMAIL REDACTED FOR PRIVACY",
+          "type": "object redacted due to authorization",
+          "description": [
+            "Please query the RDDS service of the Registrar of Record identifies in this output for information on how to contact the Registrant of the queried domain name."
+          ]
+        }
+      ]
+    },
+    {
+      "objectClassName": "entity",
+      "handle": "%CONTACT_HANDLE_2%",
+      "roles": ["technical"],
+      "links": [
+        {
+          "href": "https://example.tld/rdap/entity/%CONTACT_HANDLE_2%",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "vcardArray": [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "Siegfried"],
+          ["org", {}, "text", "GOOGLE INCORPORATED <script>"],
+          ["adr", {}, "text", [ "", "", "123 Example Boulevard <script>", "KOKOMO", "BM", "31337", "United States" ] ],
+          ["tel", { "type": [ "voice" ] }, "uri", "tel:+1.2126660420"],
+          ["tel", { "type": [ "fax" ] }, "uri", "tel:+1.2126660420"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        },
+        {
+          "title": "EMAIL REDACTED FOR PRIVACY",
+          "type": "object redacted due to authorization",
+          "description": [
+            "Please query the RDDS service of the Registrar of Record identifies in this output for information on how to contact the Registrant of the queried domain name."
+          ]
+        }
+      ]
+    },
+    {
+      "objectClassName": "entity",
+      "handle": "%CONTACT_HANDLE_3%",
+      "roles": ["registrant"],
+      "links": [
+        {
+          "href": "https://example.tld/rdap/entity/%CONTACT_HANDLE_3%",
+          "type": "application/rdap+json",
+          "rel": "self"
+        }
+      ],
+      "vcardArray": [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "Siegmund"],
+          ["org", {}, "text", "GOOGLE INCORPORATED <script>"],
+          ["adr", {}, "text", [ "", "", "123 Example Boulevard <script>", "KOKOMO", "BM", "31337", "United States" ] ],
+          ["tel", { "type": [ "voice" ] }, "uri", "tel:+1.2126660420"],
+          ["tel", { "type": [ "fax" ] }, "uri", "tel:+1.2126660420"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        },
+        {
+          "title": "EMAIL REDACTED FOR PRIVACY",
+          "type": "object redacted due to authorization",
+          "description": [
+            "Please query the RDDS service of the Registrar of Record identifies in this output for information on how to contact the Registrant of the queried domain name."
+          ]
+        }
+      ]
+    }
+  ],
+  "secureDNS":  {
+    "delegationSigned": true,
+    "zoneSigned": true,
+    "dsData": [{"algorithm":2,"digest":"DEADFACE","digestType":3,"keyTag":1}]
+  }
+}

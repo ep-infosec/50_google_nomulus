@@ -1,0 +1,552 @@
+# This is the default configuration file for Nomulus. Do not make changes to it
+# unless you are writing new features that requires you to. To customize an
+# individual deployment or environment, create a nomulus-config.yaml file in the
+# WEB-INF/ directory overriding only the values you wish to change. You may need
+# to override some of these values to configure and enable some services used in
+# production environments.
+
+gcpProject:
+  # Globally unique GCP project ID
+  projectId: registry-project-id
+  # Corresponding project ID number
+  projectIdNumber: 123456789012
+  # Location of the GCP project, note that us-central1 and europe-west1 are special in that
+  # they are used without the trailing number in GCP commands and Google Cloud Console.
+  # See: https://cloud.google.com/appengine/docs/locations as an example
+  locationId: registry-location-id
+
+  # whether to use local/test credentials when connecting to the servers
+  isLocal: true
+  # URLs of the services for the project.
+  defaultServiceUrl: https://localhost
+  backendServiceUrl: https://localhost
+  toolsServiceUrl: https://localhost
+  pubapiServiceUrl: https://localhost
+
+gSuite:
+  # Publicly accessible domain name of the running G Suite instance.
+  domainName: domain-registry.example
+
+  # Display name and email address used on outgoing emails through G Suite.
+  # The email address must be valid and have permission in the GAE app to send
+  # emails. For more info see:
+  # https://cloud.google.com/appengine/docs/standard/java/mail/#who_can_send_mail
+  outgoingEmailDisplayName: Example Registry
+  outgoingEmailAddress: noreply@project-id.appspotmail.com
+
+  # Email address of the admin account on the G Suite app. This is used for
+  # logging in to perform administrative actions, not sending emails.
+  adminAccountEmailAddress: admin@example.com
+
+  # Group containing the emails of the support accounts. These accounts will be
+  # given "ADMIN" role on the registrar console.
+  supportGroupEmailAddress: support@example.com
+
+registryPolicy:
+  # Repository identifier (ROID) suffix for contacts and hosts.
+  contactAndHostRoidSuffix: ROID
+
+  # Product name of the registry. Used throughout the registrar console.
+  productName: Nomulus
+
+  # Custom logic factory fully-qualified class name.
+  # See flows/custom/CustomLogicFactory.java
+  customLogicFactoryClass: google.registry.flows.custom.CustomLogicFactory
+
+  # WHOIS command factory fully-qualified class name.
+  # See whois/WhoisCommandFactory.java
+  whoisCommandFactoryClass: google.registry.whois.WhoisCommandFactory
+
+  # Custom logic class for handling allocation tokens.
+  # See flows/domain/token/AllocationTokenCustomLogic.java
+  allocationTokenCustomLogicClass: google.registry.flows.domain.token.AllocationTokenCustomLogic
+
+  # Custom logic class for handling DNS query count reporting for ICANN.
+  # See reporting/icann/DnsCountQueryCoordinator.java
+  dnsCountQueryCoordinatorClass: google.registry.reporting.icann.BasicDnsCountQueryCoordinator
+
+  # Length of time after which contact transfers automatically conclude.
+  contactAutomaticTransferDays: 5
+
+  # Server ID used in the 'svID' element of an EPP 'greeting'.
+  greetingServerId: Nomulus Registry
+
+  # List of email addresses that notifications of registrar and/or registrar
+  # contact updates should be sent to, or empty list for no notifications.
+  registrarChangesNotificationEmailAddresses: []
+
+  # Default WHOIS server used when not specified on a registrar.
+  defaultRegistrarWhoisServer: whois.domain-registry.example
+
+  # Mode TMCH should run in (PRODUCTION for production environments, PILOT for
+  # all others including sandbox).
+  tmchCaMode: PILOT
+
+  # URL for the ICANN TMCH Certificate Revocation List.
+  tmchCrlUrl: http://crl.icann.org/tmch_pilot.crl
+
+  # URL for the MarksDB registry interface.
+  tmchMarksDbUrl: https://test-ry.marksdb.org
+
+  # Registry’s operations registrar, used for front-end availability/premium
+  # domain checks.
+  checkApiServletClientId: TheRegistrar
+
+  # The registry admin's registrar. Admins are granted permission to log in
+  # using this registrar automatically if they are not associated with any
+  # registrar
+  registryAdminClientId: TheRegistrar
+
+  # Disclaimer at the top of the exported premium terms list.
+  premiumTermsExportDisclaimer: |
+    This list contains domains for the TLD offered at a premium price. This
+    list is subject to change. The most up-to-date source is always the
+    registry itself, by sending domain check EPP commands.
+
+  # Disclaimer at the top of the exported reserved terms list.
+  reservedTermsExportDisclaimer: |
+    This list contains reserved terms for the TLD. Other terms may be reserved
+    but not included in this list, including terms the registry chooses not
+    to publish. This list is subject to change. The most up-to-date source
+    is always the registry itself, by sending domain check EPP commands.
+
+  # Redaction text for email address in WHOIS
+  whoisRedactedEmailText: |
+    Please query the WHOIS server of the owning registrar identified in this
+    output for information on how to contact the Registrant, Admin, or Tech
+    contact of the queried domain name.
+
+  # Disclaimer at the top of WHOIS results.
+  whoisDisclaimer: |
+    WHOIS information is provided by the registry solely for query-based,
+    informational purposes. Any information provided is "as is" without any
+    guarantee of accuracy. You may not use such information to (a) allow,
+    enable, or otherwise support the transmission of mass unsolicited,
+    commercial advertising or solicitations; (b) enable high volume, automated,
+    electronic processes that access the registry's systems or any
+    ICANN-Accredited Registrar, except as reasonably necessary to register
+    domain names or modify existing registrations; or (c) engage in or support
+    unlawful behavior. We reserve the right to restrict or deny your access to
+    the WHOIS database, and may modify these terms at any time.
+
+  # RDAP Terms of Service text displayed at the /rdap/help/tos endpoint.
+  rdapTos: >
+    By querying our Domain Database as part of the RDAP pilot program (RDAP
+    Domain Database), you are agreeing to comply with these terms, so please
+    read them carefully.
+
+    Any information provided is 'as is' without any guarantee of accuracy.
+
+    Please do not misuse the RDAP Domain Database. It is intended solely for
+    query-based access on an experimental basis and should not be used for or
+    relied upon for any other purpose.
+
+    Don't use the RDAP Domain Database to allow, enable, or otherwise support
+    the transmission of mass unsolicited, commercial advertising or
+    solicitations.
+
+    Don't access our RDAP Domain Database through the use of high volume,
+    automated electronic processes that send queries or data to the systems
+    of any ICANN-accredited registrar.
+
+    You may only use the information contained in the RDAP Domain Database for
+    lawful purposes.
+
+    Do not compile, repackage, disseminate, or otherwise use the information
+    contained in the RDAP Domain Database in its entirety, or in any
+    substantial portion, without our prior written permission.
+
+    We may retain certain details about queries to our RDAP Domain Database
+    for the purposes of detecting and preventing misuse.
+
+    We reserve the right to restrict or deny your access to the RDAP Domain
+    Database if we suspect that you have failed to comply with these terms.
+
+    We reserve the right to modify or discontinue our participation in the
+    RDAP pilot program and suspend or terminate access to the RDAP Domain
+    Database at any time and for any reason in our sole discretion.
+
+    We reserve the right to modify this agreement at any time.
+
+  # Link to static Web page with RDAP terms of service. Displayed in RDAP
+  # responses. If null, no static Web page link is generated.
+  rdapTosStaticUrl: null
+
+  # Name of the registry for use in spec 11 emails
+  registryName: Example Registry
+
+  # A list of resources we send to registrars when informing them of
+  # spec 11 threats
+  spec11WebResources: []
+
+  # Whether to require an SSL certificate hash in order to be able to log in
+  # via EPP and run commands. This can be false for testing environments but
+  # should generally be true for production environments, for added security.
+  requireSslCertificates: true
+
+hibernate:
+  # Make 'SERIALIZABLE' the default isolation level to ensure correctness.
+  #
+  # Entities that are never involved in multi-table transactions may use optimistic
+  # locks and a less strict isolation level. We may lower individual transaction's
+  # isolation level using a framework-dependent method.
+  #
+  # Alternatively, if a use case calls for, we may also use a lower isolation level
+  # but lock tables explicitly, either using framework-dependent API, or execute
+  # "select table for update" statements directly.
+  connectionIsolation: TRANSACTION_SERIALIZABLE
+  # Whether to log all SQL queries to App Engine logs. Overridable at runtime.
+  logSqlQueries: false
+
+  # Connection pool configurations.
+  hikariConnectionTimeout: 20000
+  # Cloud SQL connections are a relatively scarce resource (maximum is 1000 as
+  # of March 2021). The minimumIdle should be a small value so that machines may
+  # release connections after a demand spike. The maximumPoolSize is set to 10
+  # because that is the maximum number of concurrent requests a Nomulus server
+  # instance can handle (as limited by AppEngine for basic/manual scaling). Note
+  # that BEAM pipelines are not subject to the maximumPoolSize value defined
+  # here. See PersistenceModule.java for more information.
+  hikariMinimumIdle: 1
+  hikariMaximumPoolSize: 10
+  hikariIdleTimeout: 300000
+  # The batch size is basically the number of insertions / updates in a single
+  # transaction that will be batched together into one INSERT/UPDATE statement.
+  # A larger batch size is useful when inserting or updating many entities in a
+  # single transaction. Hibernate docs
+  # (https://docs.jboss.org/hibernate/orm/5.6/userguide/html_single/Hibernate_User_Guide.html)
+  # recommend between 10 and 50.
+  jdbcBatchSize: 50
+  # The fetch size is the number of entities retrieved at a time from the
+  # database cursor. Here we set a small default geared toward Nomulus server
+  # transactions. Large queries can override the defaults on a per-query basis.
+  jdbcFetchSize: 20
+
+cloudSql:
+  # jdbc url for the Cloud SQL database.
+  # TODO(b/181693544): change the database name when upgrading postgres version
+  # Using the default 'postgres' is bad practice. See bug for more information.
+  # If jdbcUrl in this file is moved elsewhere, be sure to move this notice
+  # with it until the change is applied.
+  jdbcUrl: jdbc:postgresql://localhost
+  # This name is used by Cloud SQL when connecting to the database.
+  instanceConnectionName: project-id:region:instance-id
+  # If non-null, we will use this instance for certain read-only actions or
+  # pipelines, e.g. RDE, in order to offload some work from the primary
+  # instance. Expect any write actions on this instance to fail.
+  replicaInstanceConnectionName: null
+
+cloudDns:
+  # Set both properties to null in Production.
+  # The root url for the Cloud DNS API.  Set this to a non-null value to
+  # override the default API server used by the googleapis library.
+  rootUrl: https://staging-www.sandbox.googleapis.com
+
+  # The service endpoint path for the Cloud DNS API.  Set this to a non-null
+  # value to override the default API path used by the googleapis library.
+  servicePath: dns/v2beta1_staging/projects/
+
+caching:
+  # Length of time that a singleton should be cached before expiring.
+  singletonCacheRefreshSeconds: 600
+
+  # Length of time that a reserved/premium list should be cached before expiring.
+  domainLabelCachingSeconds: 3600
+
+  # Length of time that a long-lived singleton in persist mode should be cached.
+  singletonCachePersistSeconds: 31557600 # This is one year.
+
+  # Maximum total number of static premium list entry entities to cache in
+  # memory, across all premium lists for all TLDs. Tuning this up will use more
+  # memory (and might require using larger App Engine instances). Note that
+  # premium list entries that are absent are cached in addition to ones that are
+  # present, so the total cache size is not bounded by the total number of
+  # premium price entries that exist.
+  staticPremiumListMaxCachedEntries: 200000
+
+  # Whether to enable caching of EPP resource entities and keys. Enabling this
+  # caching allows for much higher domain create/update throughput when hosts
+  # and/or contacts are being frequently used (which is commonly the case).
+  # However, this may introduce transactional inconsistencies, such as allowing
+  # hosts or contacts to be used that are actually deleted (though in practice
+  # this will only happen for non-widely-used entities). Only set this to true
+  # if you need the performance, i.e. if you need >10 domain mutations per
+  # frequently used contact or host. This situation is typically caused by
+  # registrars reusing the same contact/host across many operations, e.g. a
+  # privacy/proxy contact or a common host pointing to a registrar-run
+  # nameserver.
+  eppResourceCachingEnabled: false
+
+  # Length of time that EPP resource entities and keys are cached in memory
+  # before expiring. This should always be shorter than asyncDeleteDelaySeconds,
+  # to prevent deleted contacts or hosts from being used on domains.
+  eppResourceCachingSeconds: 60
+
+  # The maximum number of EPP resource entities and keys to cache in memory.
+  # LoadingCache evicts rarely-used keys first, so in practice this does not
+  # have to be very large to achieve the vast majority of possible gains.
+  eppResourceMaxCachedEntries: 500
+
+  # Length of time that a claims list will be cached after retrieval. A fairly
+  # long duration is acceptable because claims lists don't change frequently.
+  claimsListCachingSeconds: 21600 # six hours
+
+oAuth:
+  # OAuth scopes to detect on access tokens. Superset of requiredOauthScopes.
+  availableOauthScopes:
+  - https://www.googleapis.com/auth/userinfo.email
+
+  # OAuth scopes required for authenticating. Subset of availableOauthScopes.
+  requiredOauthScopes:
+  - https://www.googleapis.com/auth/userinfo.email
+
+  # OAuth client IDs that are allowed to authenticate and communicate with
+  # backend services, e. g. nomulus tool, EPP proxy, etc. The client_id value
+  # used in registryTool.clientId field for associated tooling should be included
+  # in this list. Client IDs are typically of the format
+  # numbers-alphanumerics.apps.googleusercontent.com
+  allowedOauthClientIds: []
+
+credentialOAuth:
+  # OAuth scopes required for accessing Google APIs using the default
+  # credential.
+  defaultCredentialOauthScopes:
+  # View and manage data in all Google Cloud APIs.
+  - https://www.googleapis.com/auth/cloud-platform
+  # View and manage files in Google Drive, e.g., Docs and Sheets.
+  - https://www.googleapis.com/auth/drive
+  # OAuth scopes required for delegated admin access to G Suite domain.
+  # Deployment of changes to this list must be coordinated with G Suite admin
+  # configuration, which can be managed in the admin console:
+  # - New scopes must be added to the G Suite domain configuration before the
+  #   release is deployed.
+  # - Removed scopes must remain on G Suite domain configuration until the
+  #   release is deployed.
+  delegatedCredentialOauthScopes:
+  # View and manage groups on your domain in Directory API.
+  - https://www.googleapis.com/auth/admin.directory.group
+  # View and manage group settings in Group Settings API.
+  - https://www.googleapis.com/auth/apps.groups.settings
+  # OAuth scopes required to create a credential locally in for the nomulus tool.
+  localCredentialOauthScopes:
+  # View and manage data in all Google Cloud APIs.
+  - https://www.googleapis.com/auth/cloud-platform
+  # Call App Engine APIs locally.
+  - https://www.googleapis.com/auth/appengine.apis
+  # View your email address.
+  - https://www.googleapis.com/auth/userinfo.email
+  # View and manage your applications deployed on Google App Engine
+  - https://www.googleapis.com/auth/appengine.admin
+  # The lifetime of an access token generated by our custom credentials classes
+  # Must be shorter than one hour.
+  tokenRefreshDelaySeconds: 1800
+
+icannReporting:
+  # URL we PUT monthly ICANN transactions reports to.
+  icannTransactionsReportingUploadUrl: https://ry-api.icann.org/report/registrar-transactions
+
+  # URL we PUT monthly ICANN activity reports to.
+  icannActivityReportingUploadUrl: https://ry-api.icann.org/report/registry-functions-activity
+
+billing:
+  invoiceEmailRecipients: []
+  invoiceFilePrefix: REG-INV
+
+rde:
+  # URL prefix of ICANN's server to upload RDE reports to. Nomulus adds /TLD/ID
+  # to the end of this to construct the full URL.
+  reportUrlPrefix: https://test-ry-api.icann.org:8543/report/registry-escrow-report
+
+  # SFTP URL to which RDE deposits are uploaded. This should contain a username
+  # but not the password.
+  uploadUrl: sftp://username@rde-provider.example
+
+  # Identity of the SSH keys (stored in the Keyring) used for RDE SFTP uploads.
+  sshIdentityEmailAddress: rde@example.com
+
+registrarConsole:
+  # Filename of the logo to use in the header of the console. This filename is
+  # relative to ui/assets/images/
+  logoFilename: logo.png
+
+  # Contact phone number for support with the registry.
+  supportPhoneNumber: +1 (888) 555 0123
+
+  # Contact email address for support with the registry.
+  supportEmailAddress: support@example.com
+
+  # From: email address used to send announcements from the registry.
+  announcementsEmailAddress: announcements@example.com
+
+  # Contact email address for questions about integrating with the registry.
+  integrationEmailAddress: integration@example.com
+
+  # URL linking to directory of technical support docs on the registry.
+  technicalDocsUrl: http://example.com/your_support_docs/
+
+  # Configuration for all analytics services installed in the web console
+  analyticsConfig:
+    # Google Analytics account where data on console use is sent, optional
+    googleAnalyticsId: null
+
+monitoring:
+  # Max queries per second for the Google Cloud Monitoring V3 (aka Stackdriver)
+  # API. The limit can be adjusted by contacting Cloud Support.
+  stackdriverMaxQps: 30
+
+  # Max number of points that can be sent to Stackdriver in a single
+  # TimeSeries.Create API call.
+  stackdriverMaxPointsPerRequest: 200
+
+  # How often metrics are exported to BigQuery.
+  writeIntervalSeconds: 60
+
+misc:
+  # The ID of the Google Sheet (as found in the URL) to export registrar details
+  # to. Leave this null to disable syncing.
+  sheetExportId: null
+
+  # Address we send alert summary emails to.
+  alertRecipientEmailAddress: email@example.com
+
+  # Address from which Spec 11 emails to registrars are sent. This needs
+  # to be a deliverable email address to handle replies from registrars as well.
+  spec11OutgoingEmailAddress: abuse@example.com
+
+  # Addresses to which we will BCC all Spec11 email reports, in case one
+  # wishes to examine the output.
+  spec11BccEmailAddresses:
+    - abuse@example.com
+
+  # Number of times to retry a GAE operation when a transient exception is thrown.
+  # The number of milliseconds it'll sleep before giving up is (2^n - 2) * 100.
+  transientFailureRetries: 12
+
+beam:
+  # The default region to run Apache Beam (Cloud Dataflow) jobs in.
+  defaultJobRegion: us-east1
+  # The GCE machine type to use when a job is CPU-intensive (e. g. RDE). Be sure
+  # to check the VM CPU quota for the job region. In a massively parallel
+  # pipeline this quota can be easily reached and needs to be raised, otherwise
+  # the job will run very slowly. Also note that there is a separate quota for
+  # external IPv4 address in a region, which means that machine type with higher
+  # core count per machine may be preferable in order to preserve IP addresses.
+  # See: https://cloud.google.com/compute/quotas#cpu_quota
+  highPerformanceMachineType: n2-standard-4
+  # The initial number of workers requested. This can help speed up the pipeline
+  # which otherwise would take some time to spin up the necessary number of
+  # works. Autoscaling is still in effect to reduce the number of workers if
+  # not in use.
+  initialWorkerCount: 24
+  stagingBucketUrl: gcs-bucket-with-staged-templates
+
+keyring:
+  # The name of the active keyring, either "Dummy" or "CSM". The latter stands
+  # for Cloud SecretManager.
+  activeKeyring: Dummy
+
+  # Configuration options specific to Google Cloud KMS.
+  kms:
+    # GCP project containing the KMS keyring. Should only be used for KMS in
+    # order to keep a simple locked down IAM configuration.
+    projectId: registry-kms-project-id
+
+    # The name to use for the Cloud KMS KeyRing which will store encryption keys
+    # for Nomulus secrets.
+    keyringName: nomulus
+
+# Configuration options relevant to the "nomulus" registry tool.
+registryTool:
+  # OAuth client Id used by the tool.
+  clientId: YOUR_CLIENT_ID
+  # OAuth client secret used by the tool.
+  clientSecret: YOUR_CLIENT_SECRET
+
+# Configuration options for handling contact history.
+contactHistory:
+  # The number of months that a ContactHistory entity should be stored in the database.
+  minMonthsBeforeWipeOut: 18
+  # The batch size for querying ContactHistory table in the database.
+  wipeOutQueryBatchSize: 500
+
+# Configuration options relevant to the DNS update functionality.
+dnsUpdate:
+  dnsUpdateFailRegistryName: Example name
+  registrySupportEmail: email@example.com
+  registryCcEmail: email@example.com
+  # Email subject text template to notify partners after repeatedly failing DNS update
+  dnsUpdateFailEmailSubjectText: "[ACTION REQUIRED]: Incomplete DNS Update"
+  # Email body text template for failing DNS update that accepts 5 parameters:
+  # registrar name, domain or host address, 'domain' or 'host' as a string that failed,
+  # registry support email (see dnsUpdateFailRegistrySupportEmail) and registry display name
+  dnsUpdateFailEmailBodyText: >
+    Dear %1$s,
+
+    We are contacting you regarding the changes you recently made to one of your %2$ss.
+    The DNS update for the %3$s %2$s failed to process. Please review your %2$s's DNS records
+    and ensure that it is valid before trying another update.
+
+    If you have any questions or require additional support, please contact us
+    at %4$s.
+
+    Regards,
+    %5$s
+
+# Configuration options for checking SSL certificates.
+sslCertificateValidation:
+  # A map specifying the maximum amount of days the certificate can be valid.
+  # The entry key is the date closest before the date the certificate was issued
+  # and the entry value is the applicable maximum validity days for that certificate.
+  maxValidityDaysSchedule:
+    "START_OF_TIME": 825
+    "2020-09-01T00:00:00Z": 398
+  # The number of days before a certificate expires that indicates the
+  # certificate is nearing expiration and warnings should be sent.
+  expirationWarningDays: 30
+  # The minimum number of days between two successive expiring notification emails.
+  expirationWarningIntervalDays: 15
+  # Text for expiring certificate notification email subject.
+  expirationWarningEmailSubjectText: "Expiring SSL certificate for Example Registry EPP connection"
+  # Text for expiring certificate notification email body that accepts 4 parameters:
+  # registrar name, certificate type, expiration date and registrar id, respectively.
+  expirationWarningEmailBodyText: |
+    Dear %1$s,
+
+    We would like to inform you that your %2$s SSL certificate will expire at %3$s. Please take note that using expired certificates will prevent successful Registry login.
+
+    Kindly update your production account certificate within the support console using the following steps:
+
+      1. Navigate to support.registry.example and login using your %4$s@registry.example credentials.
+      2. Select “Settings > Security” from the left navigation bar.
+      3. Click “Edit” on the top left corner.
+      4. Enter your full certificate string in the box.
+      5. Click “Save”.
+
+
+    Regards,
+    Example Registry
+
+  # The minimum number of bits an RSA key must contain.
+  minimumRsaKeyLength: 2048
+  # The ECDSA curves that are allowed for public keys.
+  allowedEcdsaCurves:
+    - secp256r1
+    - secp384r1
+
+# Configuration options for the package compliance monitoring
+packageMonitoring:
+  # Email subject text to notify partners their package has exceeded the limit for domain creates
+  packageCreateLimitEmailSubjectText: "NOTICE: Your Package Is Being Upgraded"
+  # Email body text template notify partners their package has exceeded the limit for domain creates
+  packageCreateLimitEmailBodyText: >
+    Dear %1$s,
+    
+    We are contacting you to inform you that your package with the package token 
+    %2$s has exceeded its limit for annual domain creations.
+    Your package will now be upgraded to the next tier. 
+    
+    If you have any questions or require additional support, please contact us
+    at %3$s.
+    
+    Regards,
+    Example Registry

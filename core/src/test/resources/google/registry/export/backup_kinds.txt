@@ -1,0 +1,17 @@
+AllocationToken
+Cancellation
+Contact
+Domain
+EntityGroupRoot
+EppResourceIndex
+ForeignKeyContactIndex
+ForeignKeyDomainIndex
+ForeignKeyHostIndex
+HistoryEntry
+Host
+Modification
+OneTime
+PollMessage
+RdeRevision
+Recurring
+Registrar

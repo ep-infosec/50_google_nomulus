@@ -1,0 +1,69 @@
+{
+  "rdapConformance": [
+    "rdap_level_0",
+    "icann_rdap_response_profile_0",
+    "icann_rdap_technical_implementation_guide_0"
+  ],
+  "objectClassName": "nameserver",
+  "handle": "%HANDLE%",
+  "ldhName": "%PUNYCODENAME%",
+  "unicodeName": "%NAME%",
+  "status": ["active"],
+  "links": [
+    {
+      "href": "https://example.tld/rdap/nameserver/%PUNYCODENAME%",
+      "type": "application/rdap+json",
+      "rel": "self"
+    }
+  ],
+  "ipAddresses": {
+    "%ADDRESSTYPE%": [
+      "%ADDRESS%"
+    ]
+  },
+  "events": [
+    {
+      "eventAction": "last update of RDAP database",
+      "eventDate": "2000-01-01T00:00:00.000Z"
+    }
+  ],
+  "entities" : [
+    {
+      "objectClassName" : "entity",
+      "handle" : "1",
+      "roles" : ["registrar"],
+      "links" :
+      [
+        {
+          "rel" : "self",
+          "href" : "https://example.tld/rdap/entity/1",
+          "type" : "application/rdap+json"
+        }
+      ],
+      "publicIds" :
+      [
+        {
+          "type" : "IANA Registrar ID",
+          "identifier" : "1"
+        }
+      ],
+      "vcardArray" :
+      [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "The Registrar"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "description": [
+            "Summary data only. For complete data, send a specific query for the object."
+          ],
+          "type": "object truncated due to unexplainable reasons"
+        }
+      ]
+    }
+  ]
+}

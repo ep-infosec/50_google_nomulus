@@ -1,0 +1,145 @@
+# To run the build locally, install cloud-build-local first.
+# See: https://cloud.google.com/cloud-build/docs/build-debug-locally
+# You will need access to a private registry, so be sure to install the docker
+# credential helper.
+# Then, in the root of a nomulus source tree, run:
+# cloud-build-local --config=cloudbuild-nomulus.yaml --dryrun=false \
+#   --substitutions TAG_NAME=[TAG] ..
+# This will build the contents of the current directory and generate the
+# nomulus war-files locally.
+# The PROJECT_ID is the current project name that gcloud uses.
+# You can add "--push true" to have the image pushed to GCR.
+#
+# To manually trigger a build on GCB, run:
+# gcloud builds submit --config cloudbuild-nomulus.yaml --substitutions TAG_NAME=[TAG] ..
+#
+# To trigger a build automatically, follow the instructions below and add a trigger:
+# https://cloud.google.com/cloud-build/docs/running-builds/automate-builds
+steps:
+# Create a directory to store the artifacts
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  args: ['mkdir', 'nomulus']
+# Run tests
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  # Set home for Gradle caches. Must be consistent with last step below
+  # and ./build_nomulus_for_env.sh
+  env: [ 'GRADLE_USER_HOME=/workspace/cloudbuild-caches' ]
+  args: ['./gradlew',
+         'test',
+         '-PskipDockerIncompatibleTests=true',
+         '-PmavenUrl=gcs://domain-registry-maven-repository/maven',
+         '-PpluginsUrl=gcs://domain-registry-maven-repository/plugins'
+        ]
+# Build and package the deployment files for each environment, and the tool
+# binary and image.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  # Set home for Gradle caches. Must be consistent with last step below
+  # and ./build_nomulus_for_env.sh
+  env: [ 'GRADLE_USER_HOME=/workspace/cloudbuild-caches' ]
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    for _env in tool alpha crash sandbox  production
+    do
+      release/build_nomulus_for_env.sh $${_env} output
+    done
+# Save TAG_NAME in ./output/tag_name, to be uploaded later. This file is purely
+# informational. It makes it easier to tell the tag of the current 'live' release.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  entrypoint: /bin/bash
+  args: [ '-c', 'echo ${TAG_NAME} > output/tag_name']
+# Tag the tool image and push it to the registry.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    docker tag nomulus-tool gcr.io/${PROJECT_ID}/nomulus-tool:${TAG_NAME}
+    docker tag nomulus-tool gcr.io/${PROJECT_ID}/nomulus-tool:latest
+    docker push gcr.io/${PROJECT_ID}/nomulus-tool:${TAG_NAME}
+    docker push gcr.io/${PROJECT_ID}/nomulus-tool:latest
+# Get the tool image digest and substitute in the digest in other GCB files.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  entrypoint: /bin/bash
+  args:
+  - -c
+  - |
+    set -e
+    digest=$(gcloud container images list-tags gcr.io/${PROJECT_ID}/nomulus-tool \
+      --format="get(digest)" --filter="tags = ${TAG_NAME}")
+    sed -i s/'$${_IMAGE}'/nomulus-tool/g release/cloudbuild-tag.yaml
+    sed -i s/':$${TAG_NAME}'/@$digest/g release/cloudbuild-tag.yaml
+    sed -i s/'nomulus-tool:latest'/nomulus-tool@$digest/g release/cloudbuild-deploy-*.yaml
+    # schema-deploy and schema-verify scripts
+    sed -i s/'nomulus-tool:latest'/nomulus-tool@$digest/g release/cloudbuild-schema-*.yaml
+# Build and stage Dataflow Flex templates.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  entrypoint: /bin/bash
+  # Set home for Gradle caches. Must be consistent with previous steps above
+  # and ./build_nomulus_for_env.sh
+  env: [ 'GRADLE_USER_HOME=/workspace/cloudbuild-caches' ]
+  args:
+  - -c
+  - |
+    ./release/stage_beam_pipeline.sh \
+      beamPipelineCommon \
+      beam_pipeline_common \
+      ${TAG_NAME} \
+      ${PROJECT_ID} \
+      google.registry.beam.spec11.Spec11Pipeline \
+      google/registry/beam/spec11_pipeline_metadata.json \
+      google.registry.beam.invoicing.InvoicingPipeline \
+      google/registry/beam/invoicing_pipeline_metadata.json \
+      google.registry.beam.rde.RdePipeline \
+      google/registry/beam/rde_pipeline_metadata.json \
+      google.registry.beam.resave.ResaveAllEppResourcesPipeline \
+      google/registry/beam/resave_all_epp_resources_pipeline_metadata.json
+# Tentatively build and publish Cloud SQL schema jar here, before schema release
+# process is finalized. Also publish nomulus:core jars that are needed for
+# server/schema compatibility tests.
+- name: 'gcr.io/${PROJECT_ID}/builder:latest'
+  entrypoint: /bin/bash
+  # Set home for Gradle caches. Must be consistent with previous steps above
+  # and ./build_nomulus_for_env.sh
+  env: [ 'GRADLE_USER_HOME=/workspace/cloudbuild-caches' ]
+  args:
+  - -c
+  - |
+    set -e
+    ./gradlew \
+      :db:publish \
+      -PmavenUrl=gcs://domain-registry-maven-repository/maven \
+      -PpluginsUrl=gcs://domain-registry-maven-repository/plugins \
+      -Ppublish_repo=gcs://${PROJECT_ID}-deployed-tags/maven \
+      -Pschema_version=${TAG_NAME}
+    ./gradlew \
+      :core:publish \
+      -PmavenUrl=gcs://domain-registry-maven-repository/maven \
+      -PpluginsUrl=gcs://domain-registry-maven-repository/plugins \
+      -Ppublish_repo=gcs://${PROJECT_ID}-deployed-tags/maven \
+      -Pnomulus_version=${TAG_NAME}
+    # Upload schema jar for use by schema deployment.
+    # TODO(weiminyu): consider using the jar in maven repo during deployment and
+    # stop the  upload here.
+    cp db/build/libs/schema.jar output/
+# The tarballs and jars to upload to GCS.
+artifacts:
+  objects:
+    location: 'gs://${PROJECT_ID}-deploy/${TAG_NAME}'
+    paths:
+    - 'output/*.tar'
+    - 'output/tag_name'
+    - 'output/nomulus.jar'
+    - 'output/schema.jar'
+    - 'release/cloudbuild-tag.yaml'
+    - 'release/cloudbuild-sync.yaml'
+    - 'release/cloudbuild-deploy-*.yaml'
+    - 'release/cloudbuild-delete-*.yaml'
+    - 'release/cloudbuild-schema-deploy-*.yaml'
+    - 'release/cloudbuild-schema-verify-*.yaml'
+
+timeout: 7200s
+options:
+  machineType: 'E2_HIGHCPU_32'

@@ -1,0 +1,127 @@
+{
+  "objectClassName": "domain",
+  "handle": "18-Q9JYB4C",
+  "ldhName": "fish.xn--q9jyb4c",
+  "unicodeName": "fish.みんな",
+  "status":
+    [
+      "client delete prohibited",
+      "client renew prohibited",
+      "client transfer prohibited",
+      "inactive",
+      "server update prohibited"
+    ],
+  "links":
+  [
+    {
+      "rel": "self",
+      "href": "https://example.tld/rdap/domain/fish.xn--q9jyb4c",
+      "type": "application/rdap+json"
+    },
+    {
+      "href": "https://rdap.example.com/withSlash/domain/fish.xn--q9jyb4c",
+      "type": "application/rdap+json",
+      "rel": "related"
+    },
+    {
+      "href": "https://rdap.example.com/withoutSlash/domain/fish.xn--q9jyb4c",
+      "type": "application/rdap+json",
+      "rel": "related"
+    }
+  ],
+  "events": [
+    {
+      "eventAction": "registration",
+      "eventActor": "unicoderegistrar",
+      "eventDate": "2000-01-01T00:00:00.000Z"
+    },
+    {
+      "eventAction": "expiration",
+      "eventDate": "2110-10-08T00:44:59.000Z"
+    },
+    {
+      "eventAction": "last update of RDAP database",
+      "eventDate": "2000-01-01T00:00:00.000Z"
+    }
+  ],
+  "secureDNS": {
+    "delegationSigned": true,
+    "dsData": [{"algorithm":2,"digest":"DEADFACE","digestType":3,"keyTag":1}],
+    "zoneSigned": true
+  },
+  "entities": [
+    {
+      "objectClassName": "entity",
+      "handle": "1",
+      "roles": ["registrar"],
+      "links":
+      [
+        {
+          "rel": "self",
+          "href": "https://example.tld/rdap/entity/1",
+          "type": "application/rdap+json"
+        }
+      ],
+      "publicIds":
+      [
+        {
+          "type": "IANA Registrar ID",
+          "identifier": "1"
+        }
+      ],
+      "vcardArray":
+      [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "みんな"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "description": [
+            "Summary data only. For complete data, send a specific query for the object."
+          ],
+          "type": "object truncated due to unexplainable reasons"
+        }
+      ]
+    },
+    {
+      "objectClassName": "entity",
+      "handle": "2-ROID",
+      "roles": ["administrative", "technical", "registrant"],
+      "links": [
+        {
+          "rel": "self",
+          "href": "https://example.tld/rdap/entity/2-ROID",
+          "type": "application/rdap+json"
+        }
+      ],
+      "vcardArray": [
+        "vcard",
+        [
+          ["version", {}, "text", "4.0"],
+          ["fn", {}, "text", "(◕‿◕)"],
+          ["org", {}, "text", "GOOGLE INCORPORATED <script>"],
+          ["tel", {"type": ["voice"]}, "uri", "tel:+1.2126660420"],
+          ["tel", {"type": ["fax"]}, "uri", "tel:+1.2126660420"]
+        ]
+      ],
+      "remarks": [
+        {
+          "title": "Incomplete Data",
+          "type": "object truncated due to unexplainable reasons",
+          "description": ["Summary data only. For complete data, send a specific query for the object."]
+        },
+        {
+          "title": "EMAIL REDACTED FOR PRIVACY",
+          "type": "object redacted due to authorization",
+          "description": [
+            "Please query the RDDS service of the Registrar of Record identifies in this output for information on how to contact the Registrant of the queried domain name."
+          ]
+        }
+      ]
+    }
+  ]
+}

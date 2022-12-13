@@ -1,0 +1,15 @@
+AllocationToken
+Cancellation
+Contact
+Domain
+EppResourceIndex
+ForeignKeyContactIndex
+ForeignKeyDomainIndex
+ForeignKeyHostIndex
+HistoryEntry
+Host
+Modification
+OneTime
+PollMessage
+Recurring
+Registrar
